@@ -61,4 +61,3 @@ class SwaggerShowInPredicate(object):
 
     def __call__(self, context, request):
         return True
-

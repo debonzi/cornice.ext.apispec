@@ -2,19 +2,26 @@ import logging
 
 from apispec import APISpec
 from cornice_apispec.paths import add_pyramid_paths
-from cornice_apispec.predicates import SwaggerDescriptionPredicate, SwaggerResponseSchemasPredicate, \
-    SwaggerShowInPredicate, SwaggerSummaryPredicate, SwaggerTagsPredicate
+from cornice_apispec.predicates import (
+    SwaggerDescriptionPredicate,
+    SwaggerResponseSchemasPredicate,
+    SwaggerShowInPredicate,
+    SwaggerSummaryPredicate,
+    SwaggerTagsPredicate,
+)
 
 logger = logging.getLogger(__name__)
 
 
 def includeme(config):
-    config.include('pyramid_apispec.views')
-    config.add_view_predicate('apispec_response_schemas', SwaggerResponseSchemasPredicate)
-    config.add_view_predicate('apispec_tags', SwaggerTagsPredicate)
-    config.add_view_predicate('apispec_summary', SwaggerSummaryPredicate)
-    config.add_view_predicate('apispec_description', SwaggerDescriptionPredicate)
-    config.add_view_predicate('apispec_show', SwaggerShowInPredicate)
+    config.include("pyramid_apispec.views")
+    config.add_view_predicate(
+        "apispec_response_schemas", SwaggerResponseSchemasPredicate
+    )
+    config.add_view_predicate("apispec_tags", SwaggerTagsPredicate)
+    config.add_view_predicate("apispec_summary", SwaggerSummaryPredicate)
+    config.add_view_predicate("apispec_description", SwaggerDescriptionPredicate)
+    config.add_view_predicate("apispec_show", SwaggerShowInPredicate)
     # To auto-generate the Swagger view
     # use settings["auto_generate.swagger.view"] = True
     # or simply do not set anything.
@@ -23,8 +30,7 @@ def includeme(config):
     settings = config.registry.settings
     if settings.get("auto_generate.swagger.view", True) is True:
         config.add_route("openapi_spec", "/openapi.json")
-        config.pyramid_apispec_add_explorer(
-            spec_route_name='openapi_spec')
+        config.pyramid_apispec_add_explorer(spec_route_name="openapi_spec")
 
 
 def generate_spec(request, swagger_info, plugins, filter_by_tags=False):
@@ -84,8 +90,8 @@ def generate_spec(request, swagger_info, plugins, filter_by_tags=False):
         * `show_head`: Show HEAD requests in Swagger (default: False)
         * `show_options`: Show OPTIONS requests in Swagger (default: True)
         * `tag_list`: Tag dict list. No defaults.
-            (example: [{'name': 'my tag', 'description': 'my description'}]).
-        * `scheme`: http or https. If not informed, will extract from request.
+            (example: [{'name': 'my tag', 'description': 'my description'}]).            add_pyramid_paths(
+0
 
         The `filter_by_tags` option will filter all views which does not have at
         least one tag from swagger_info tag_list.
@@ -96,11 +102,12 @@ def generate_spec(request, swagger_info, plugins, filter_by_tags=False):
     :param filter_by_tags: Show only views with tags inside tag_list
     :return: Dict
     """
+
     def check_tag(view):
         if not filter_by_tags:
             return True
-        view_tags = view['introspectable'].get('apispec_tags', [])
-        openapi_tags = [tag['name'] for tag in spec._tags]
+        view_tags = view["introspectable"].get("apispec_tags", [])
+        openapi_tags = [tag["name"] for tag in spec._tags]
         if not view_tags:
             return False
         for tag in view_tags:
@@ -109,36 +116,49 @@ def generate_spec(request, swagger_info, plugins, filter_by_tags=False):
         return False
 
     spec = APISpec(
-        title=swagger_info.get('title', "OpenAPI Docs"),
-        version=swagger_info.get('version', '0.1.0'),
+        title=swagger_info.get("title", "OpenAPI Docs"),
+        version=swagger_info.get("version", "0.1.0"),
         plugins=[plugin() for plugin in plugins],
-        openapi_version=swagger_info.get('openapi_version', '3.0.2')
+        openapi_version=swagger_info.get("openapi_version", "3.0.2"),
     )
+    print("############################# APISPEC: APISpec criada")
 
-    for tag in swagger_info.get('tag_list', []):
+    for tag in swagger_info.get("tag_list", []):
+        print("############################# APISPEC: tag_list", tag)
         spec.tag(tag)
 
-    for view in request.registry.introspector.get_category('views'):
-        show_apispec = view['introspectable'].get('apispec_show', False) is True
-        has_request_methods = view['introspectable'].get('request_methods')
+    print("############################# APISPEC: Going for views")
+    for view in request.registry.introspector.get_category("views"):
+        show_apispec = view["introspectable"].get("apispec_show", False) is True
+        has_request_methods = view["introspectable"].get("request_methods")
         has_tag = check_tag(view)
+        print(
+            f"############################# APISPEC: show_apispec: {show_apispec}, has_request_methods: {has_request_methods}, has_tag: {has_tag}"
+        )
         if show_apispec and has_request_methods and has_tag:
             add_pyramid_paths(
-                spec, view['introspectable'].get('route_name'),
+                spec,
+                view["introspectable"].get("route_name"),
                 request=request,
-                show_head=swagger_info.get('show_head', False),
-                show_options=swagger_info.get('show_options', True)
+                show_head=swagger_info.get("show_head", False),
+                show_options=swagger_info.get("show_options", True),
             )
+            """
+            add_pyramid_paths
+               -> get_operations
+                 -> AutoDoc
+            """
 
+    print("############################# APISPEC: spec.to_dict")
     openapi_spec = spec.to_dict()
 
-    main_description = swagger_info.get('main_description', "")
+    main_description = swagger_info.get("main_description", "")
     if main_description:
-        openapi_spec['info'].update({'description': main_description})
+        openapi_spec["info"].update({"description": main_description})
 
-    scheme = swagger_info.get('scheme', request.scheme)
-    main_server_url = '{}://{}'.format(scheme, request.host)
-    logger.info('Server URL for swagger json is {}'.format(main_server_url))
-    openapi_spec.update({'servers': [{'url': main_server_url}]})
+    scheme = swagger_info.get("scheme", request.scheme)
+    main_server_url = "{}://{}".format(scheme, request.host)
+    logger.info("Server URL for swagger json is {}".format(main_server_url))
+    openapi_spec.update({"servers": [{"url": main_server_url}]})
 
     return openapi_spec

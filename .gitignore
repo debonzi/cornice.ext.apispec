@@ -103,3 +103,5 @@ docs/build
 setup.py
 .autoenv
 
+# VSCode
+.vscode
